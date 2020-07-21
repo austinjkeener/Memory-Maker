@@ -12,7 +12,7 @@ cloudinary.config({
 });
 
 router.post("/", async (req, res) => {
-  console.log(req.body);
+  const verifiedToken = await verifyToken(req.cookies.sessionToken);
   const form = new multiparty.Form();
 
   const successHandler = (result) => {
@@ -51,9 +51,6 @@ router.post("/", async (req, res) => {
     errorHandler
   );
 
-  console.log("cookies: ", req.cookies);
-  const verifiedToken = await verifyToken(req.cookies.sessionToken);
-
   const event = await db.Event.create({
     title: eventData.title,
     date: eventData.date,
@@ -63,9 +60,6 @@ router.post("/", async (req, res) => {
     CategoryId: category.id,
     UserUsername: verifiedToken.data,
   }).catch(errorHandler);
-
-  console.log(event);
-
   try {
     const uploadFilesRequests = formData.files["file[]"].map(
       (file) =>
@@ -77,11 +71,11 @@ router.post("/", async (req, res) => {
             {}, // directory and tags are optional
             async (err, image) => {
               if (err) return reject(err);
-              console.log("file uploaded to Cloudinary", image);
+              console.log("file uploaded to Cloudinary");
               await db.Image.create({
                 url: image.url,
                 name: originalFilename,
-                eventId: event.id,
+                EventId: event.dataValues.id,
               });
               resolve(image);
             }
@@ -96,38 +90,31 @@ router.post("/", async (req, res) => {
 });
 
 router.put("/:id", (req, res) => {
-  console.log(req.body);
-
-  db.Event.findOne({
-    where: {
-      id: parseInt(req.params.id),
+  try {
+    verifyToken(req.cookies.sessionToken);
+    db.Event.update({
+      title: req.body.title,
+      date: req.body.date,
+      description:req.body.description,
+      location: req.body.location,
+      rating: req.body.rating,
+      CategoryId: req.body.id
     },
-    
-  })
-    .then((response) => {
-      console.log(response.dataValues);
-
-      const {
-        id,
-        title,
-        date,
-        description,
-        location,
-        rating,
-      } = response.dataValues;
-      console.log({ title: title });
-
-      res.render("newMemory",  {description} );
+    {
+      where: {
+        id: parseInt(req.params.id),
+      },
     })
-    .catch((err) => {
-      console.log(err);
-    });
-});
-
-router.delete("/:id", (req, res) => {
-  res.json({
-    message: "Delete route",
-  });
+      .then((response) => {
+        res.json(response)
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+  } catch(error) {
+    console.error(error)
+    res.status(401).redirect('/');
+  } 
 });
 
 module.exports = router;
