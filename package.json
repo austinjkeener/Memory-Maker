@@ -14,7 +14,7 @@
     "multiparty": "^4.2.1",
     "mysql2": "^2.1.0",
     "nodemon": "^2.0.4",
-    "sequelize": "^6.3.3"
+    "sequelize": "^6.28.2"
   },
   "devDependencies": {},
   "scripts": {
